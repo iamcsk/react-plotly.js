@@ -15,7 +15,5 @@ npm-debug.log*
 
 package-lock.json.*
 
-factory.js
-factory.js.map
 package-lock.json
 yarn.lock
