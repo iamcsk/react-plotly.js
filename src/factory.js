@@ -113,12 +113,14 @@ export default function plotComponentFactory(Plotly) {
 
       this.p = this.p
         .then(() => {
+          if(Plotly.react){
           return Plotly.react(this.el, {
             data: nextProps.data,
             layout: nextProps.layout,
             config: nextProps.config,
             frames: nextProps.frames,
           });
+         }
         })
         .then(() => this.syncEventHandlers(nextProps))
         .then(() => this.syncWindowResize(nextProps))

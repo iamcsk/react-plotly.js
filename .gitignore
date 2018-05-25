@@ -11,7 +11,6 @@ npm-debug.log*
 !.babelrc
 !.eslintignore
 
-dist
 !example/dist
 
 package-lock.json.*
