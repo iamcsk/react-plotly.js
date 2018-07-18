@@ -16,14 +16,6 @@ var _propTypes = require('prop-types');
 
 var _propTypes2 = _interopRequireDefault(_propTypes);
 
-var _fastIsnumeric = require('fast-isnumeric');
-
-var _fastIsnumeric2 = _interopRequireDefault(_fastIsnumeric);
-
-var _objectAssign = require('object-assign');
-
-var _objectAssign2 = _interopRequireDefault(_objectAssign);
-
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -35,7 +27,7 @@ function _inherits(subClass, superClass) { if (typeof superClass !== "function" 
 // The naming convention is:
 //   - events are attached as `'plotly_' + eventName.toLowerCase()`
 //   - react props are `'on' + eventName`
-var eventNames = ['AfterExport', 'AfterPlot', 'Animated', 'AnimatingFrame', 'AnimationInterrupted', 'AutoSize', 'BeforeExport', 'ButtonClicked', 'Click', 'ClickAnnotation', 'Deselect', 'DoubleClick', 'Framework', 'Hover', 'Relayout', 'Restyle', 'Redraw', 'Selected', 'Selecting', 'SliderChange', 'SliderEnd', 'SliderStart', 'Transitioning', 'TransitionInterrupted', 'Unhover'];
+var eventNames = ['AfterExport', 'AfterPlot', 'Animated', 'AnimatingFrame', 'AnimationInterrupted', 'AutoSize', 'BeforeExport', 'ButtonClicked', 'Click', 'ClickAnnotation', 'Deselect', 'DoubleClick', 'Framework', 'Hover', 'LegendClick', 'LegendDoubleClick', 'Relayout', 'Restyle', 'Redraw', 'Selected', 'Selecting', 'SliderChange', 'SliderEnd', 'SliderStart', 'Transitioning', 'TransitionInterrupted', 'Unhover'];
 
 var updateEvents = ['plotly_restyle', 'plotly_redraw', 'plotly_relayout', 'plotly_doubleclick', 'plotly_animated'];
 
@@ -44,8 +36,6 @@ var updateEvents = ['plotly_restyle', 'plotly_redraw', 'plotly_relayout', 'plotl
 var isBrowser = typeof window !== 'undefined';
 
 function plotComponentFactory(Plotly) {
-  var hasReactAPIMethod = !!Plotly.react;
-
   var PlotlyComponent = function (_Component) {
     _inherits(PlotlyComponent, _Component);
 
@@ -55,7 +45,6 @@ function plotComponentFactory(Plotly) {
       var _this = _possibleConstructorReturn(this, (PlotlyComponent.__proto__ || Object.getPrototypeOf(PlotlyComponent)).call(this, props));
 
       _this.p = Promise.resolve();
-      _this.fitHandler = null;
       _this.resizeHandler = null;
       _this.handlers = {};
 
@@ -64,34 +53,29 @@ function plotComponentFactory(Plotly) {
       _this.attachUpdateEvents = _this.attachUpdateEvents.bind(_this);
       _this.getRef = _this.getRef.bind(_this);
       _this.handleUpdate = _this.handleUpdate.bind(_this);
+      _this.figureCallback = _this.figureCallback.bind(_this);
       return _this;
     }
 
     _createClass(PlotlyComponent, [{
-      key: 'shouldComponentUpdate',
-      value: function shouldComponentUpdate(nextProps) {
-        return nextProps.revision === void 0 || nextProps.revision !== this.props.revision;
-      }
-    }, {
       key: 'componentDidMount',
       value: function componentDidMount() {
         var _this2 = this;
 
-        if (!isBrowser) return;
         this.p = this.p.then(function () {
           return Plotly.newPlot(_this2.el, {
             data: _this2.props.data,
-            layout: _this2.resizedLayoutIfFit(_this2.props.layout),
+            layout: _this2.props.layout,
             config: _this2.props.config,
             frames: _this2.props.frames
           });
         }).then(function () {
-          return _this2.syncWindowResize(null, false);
+          return _this2.syncWindowResize(null, true);
         }).then(this.syncEventHandlers).then(this.attachUpdateEvents).then(function () {
-          return _this2.props.onInitialized && _this2.props.onInitialized(_this2.el);
-        }).catch(function (e) {
-          console.error('Error while plotting:', e);
-          return _this2.props.onError && _this2.props.onError();
+          return _this2.figureCallback(_this2.props.onInitialized);
+        }).catch(function (err) {
+          console.error('Error while plotting:', err);
+          return _this2.props.onError && _this2.props.onError(err);
         });
       }
     }, {
@@ -99,20 +83,24 @@ function plotComponentFactory(Plotly) {
       value: function componentWillUpdate(nextProps) {
         var _this3 = this;
 
-        if (!isBrowser) return;
+        if (nextProps.revision !== void 0 && nextProps.revision === this.props.revision) {
+          // if revision is set and unchanged, do nothing
+          return;
+        }
+
+        var numPrevFrames = this.props.frames && this.props.frames.length ? this.props.frames.length : 0;
+        var numNextFrames = nextProps.frames && nextProps.frames.length ? nextProps.frames.length : 0;
+        if (nextProps.layout === this.props.layout && nextProps.data === this.props.data && nextProps.config === this.props.config && numNextFrames === numPrevFrames) {
+          // prevent infinite loops when component is re-rendered after onUpdate
+          // frames *always* changes identity so fall back to check length only :(
+          return;
+        }
+
         this.p = this.p.then(function () {
-          if (hasReactAPIMethod) {
+          if (Plotly.react) {
             return Plotly.react(_this3.el, {
               data: nextProps.data,
-              layout: _this3.resizedLayoutIfFit(nextProps.layout),
-              config: nextProps.config,
-              frames: nextProps.frames
-            });
-          } else {
-            _this3.handlers = {};
-            return Plotly.newPlot(_this3.el, {
-              data: nextProps.data,
-              layout: _this3.resizedLayoutIfFit(nextProps.layout),
+              layout: nextProps.layout,
               config: nextProps.config,
               frames: nextProps.frames
             });
@@ -122,9 +110,7 @@ function plotComponentFactory(Plotly) {
         }).then(function () {
           return _this3.syncWindowResize(nextProps);
         }).then(function () {
-          if (!hasReactAPIMethod) _this3.attachUpdateEvents();
-        }).then(function () {
-          return _this3.handleUpdate(nextProps);
+          return _this3.figureCallback(nextProps.onUpdate);
         }).catch(function (err) {
           console.error('Error while plotting:', err);
           _this3.props.onError && _this3.props.onError(err);
@@ -133,13 +119,8 @@ function plotComponentFactory(Plotly) {
     }, {
       key: 'componentWillUnmount',
       value: function componentWillUnmount() {
-        if (this.props.onPurge) {
-          this.props.onPurge(this.el);
-        }
-        if (this.fitHandler && isBrowser) {
-          window.removeEventListener('resize', this.fitHandler);
-          this.fitHandler = null;
-        }
+        this.figureCallback(this.props.onPurge);
+
         if (this.resizeHandler && isBrowser) {
           window.removeEventListener('resize', this.resizeHandler);
           this.resizeHandler = null;
@@ -169,37 +150,38 @@ function plotComponentFactory(Plotly) {
       }
     }, {
       key: 'handleUpdate',
-      value: function handleUpdate(props) {
-        props = props || this.props;
-        if (props.onUpdate && typeof props.onUpdate === 'function') {
-          props.onUpdate(this.el);
+      value: function handleUpdate() {
+        this.figureCallback(this.props.onUpdate);
+      }
+    }, {
+      key: 'figureCallback',
+      value: function figureCallback(callback) {
+        if (typeof callback === 'function') {
+          var _el = this.el,
+              data = _el.data,
+              layout = _el.layout;
+
+          var frames = this.el._transitionData ? this.el._transitionData._frames : null;
+          var figure = { data: data, layout: layout, frames: frames }; // for extra clarity!
+          callback(figure, this.el);
         }
       }
     }, {
       key: 'syncWindowResize',
-      value: function syncWindowResize(props, invoke) {
+      value: function syncWindowResize(propsIn, invoke) {
         var _this4 = this;
 
-        props = props || this.props;
+        var props = propsIn || this.props;
         if (!isBrowser) return;
-
-        if (props.fit && !this.fitHandler) {
-          this.fitHandler = function () {
-            return Plotly.relayout(_this4.el, _this4.getSize());
-          };
-          window.addEventListener('resize', this.fitHandler);
-
-          if (invoke) return this.fitHandler();
-        } else if (!props.fit && this.fitHandler) {
-          window.removeEventListener('resize', this.fitHandler);
-          this.fitHandler = null;
-        }
 
         if (props.useResizeHandler && !this.resizeHandler) {
           this.resizeHandler = function () {
             return Plotly.Plots.resize(_this4.el);
           };
           window.addEventListener('resize', this.resizeHandler);
+          if (invoke) {
+            this.resizeHandler();
+          }
         } else if (!props.useResizeHandler && this.resizeHandler) {
           window.removeEventListener('resize', this.resizeHandler);
           this.resizeHandler = null;
@@ -219,9 +201,9 @@ function plotComponentFactory(Plotly) {
 
     }, {
       key: 'syncEventHandlers',
-      value: function syncEventHandlers(props) {
+      value: function syncEventHandlers(propsIn) {
         // Allow use of nextProps if passed explicitly:
-        props = props || this.props;
+        var props = propsIn || this.props;
 
         for (var i = 0; i < eventNames.length; i++) {
           var eventName = eventNames[i];
@@ -239,36 +221,10 @@ function plotComponentFactory(Plotly) {
         }
       }
     }, {
-      key: 'resizedLayoutIfFit',
-      value: function resizedLayoutIfFit(layout) {
-        if (!this.props.fit) {
-          return layout;
-        }
-        return (0, _objectAssign2.default)({}, layout, this.getSize(layout));
-      }
-    }, {
-      key: 'getSize',
-      value: function getSize(layout) {
-        var rect = void 0;
-        layout = layout || this.props.layout;
-        var layoutWidth = layout ? layout.width : null;
-        var layoutHeight = layout ? layout.height : null;
-        var hasWidth = (0, _fastIsnumeric2.default)(layoutWidth);
-        var hasHeight = (0, _fastIsnumeric2.default)(layoutHeight);
-
-        if (!hasWidth || !hasHeight) {
-          rect = this.el.parentElement.getBoundingClientRect();
-        }
-
-        return {
-          width: hasWidth ? parseInt(layoutWidth) : rect.width,
-          height: hasHeight ? parseInt(layoutHeight) : rect.height
-        };
-      }
-    }, {
       key: 'render',
       value: function render() {
         return _react2.default.createElement('div', {
+          id: this.props.divId,
           style: this.props.style,
           ref: this.getRef,
           className: this.props.className
@@ -280,7 +236,6 @@ function plotComponentFactory(Plotly) {
   }(_react.Component);
 
   PlotlyComponent.propTypes = {
-    fit: _propTypes2.default.bool,
     data: _propTypes2.default.arrayOf(_propTypes2.default.object),
     config: _propTypes2.default.object,
     layout: _propTypes2.default.object,
@@ -293,7 +248,8 @@ function plotComponentFactory(Plotly) {
     debug: _propTypes2.default.bool,
     style: _propTypes2.default.object,
     className: _propTypes2.default.string,
-    useResizeHandler: _propTypes2.default.bool
+    useResizeHandler: _propTypes2.default.bool,
+    divId: _propTypes2.default.string
   };
 
   for (var i = 0; i < eventNames.length; i++) {
@@ -302,7 +258,6 @@ function plotComponentFactory(Plotly) {
 
   PlotlyComponent.defaultProps = {
     debug: false,
-    fit: false,
     useResizeHandler: false,
     data: [],
     style: { position: 'relative', display: 'inline-block' }
