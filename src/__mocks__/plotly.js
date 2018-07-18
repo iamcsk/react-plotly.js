@@ -18,14 +18,6 @@ export default {
       state.gd.emit('plotly_afterplot');
     }, ASYNC_DELAY);
   }),
-  react: jest.fn(gd => {
-    state.gd = gd;
-    EventEmitter(state.gd);
-
-    setTimeout(() => {
-      state.gd.emit('plotly_afterplot');
-    }, ASYNC_DELAY);
-  }),
   relayout: jest.fn(gd => {
     state.gd = gd;
     setTimeout(() => {

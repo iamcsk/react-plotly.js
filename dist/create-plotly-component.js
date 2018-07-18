@@ -1,4 +1,61 @@
 (function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.createPlotlyComponent = f()}})(function(){var define,module,exports;return (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
+/**
+ * inspired by is-number <https://github.com/jonschlinkert/is-number>
+ * but significantly simplified and sped up by ignoring number and string constructors
+ * ie these return false:
+ *   new Number(1)
+ *   new String('1')
+ */
+
+'use strict';
+
+/**
+ * Is this string all whitespace?
+ * This solution kind of makes my brain hurt, but it's significantly faster
+ * than !str.trim() or any other solution I could find.
+ *
+ * whitespace codes from: http://en.wikipedia.org/wiki/Whitespace_character
+ * and verified with:
+ *
+ *  for(var i = 0; i < 65536; i++) {
+ *      var s = String.fromCharCode(i);
+ *      if(+s===0 && !s.trim()) console.log(i, s);
+ *  }
+ *
+ * which counts a couple of these as *not* whitespace, but finds nothing else
+ * that *is* whitespace. Note that charCodeAt stops at 16 bits, but it appears
+ * that there are no whitespace characters above this, and code points above
+ * this do not map onto white space characters.
+ */
+function allBlankCharCodes(str){
+    var l = str.length,
+        a;
+    for(var i = 0; i < l; i++) {
+        a = str.charCodeAt(i);
+        if((a < 9 || a > 13) && (a !== 32) && (a !== 133) && (a !== 160) &&
+            (a !== 5760) && (a !== 6158) && (a < 8192 || a > 8205) &&
+            (a !== 8232) && (a !== 8233) && (a !== 8239) && (a !== 8287) &&
+            (a !== 8288) && (a !== 12288) && (a !== 65279)) {
+                return false;
+        }
+    }
+    return true;
+}
+
+module.exports = function(n) {
+    var type = typeof n;
+    if(type === 'string') {
+        var original = n;
+        n = +n;
+        // whitespace strings cast to zero - filter them out
+        if(n===0 && allBlankCharCodes(original)) return false;
+    }
+    else if(type !== 'number') return false;
+
+    return n - n < 1;
+};
+
+},{}],2:[function(require,module,exports){
 /*
 object-assign
 (c) Sindre Sorhus
@@ -90,7 +147,7 @@ module.exports = shouldUseNative() ? Object.assign : function (target, source) {
 	return to;
 };
 
-},{}],2:[function(require,module,exports){
+},{}],3:[function(require,module,exports){
 // shim for using process in browser
 var process = module.exports = {};
 
@@ -276,7 +333,7 @@ process.chdir = function (dir) {
 };
 process.umask = function() { return 0; };
 
-},{}],3:[function(require,module,exports){
+},{}],4:[function(require,module,exports){
 (function (process){
 /**
  * Copyright (c) 2013-present, Facebook, Inc.
@@ -371,7 +428,7 @@ function checkPropTypes(typeSpecs, values, location, componentName, getStack) {
 module.exports = checkPropTypes;
 
 }).call(this,require('_process'))
-},{"./lib/ReactPropTypesSecret":7,"_process":2}],4:[function(require,module,exports){
+},{"./lib/ReactPropTypesSecret":8,"_process":3}],5:[function(require,module,exports){
 /**
  * Copyright (c) 2013-present, Facebook, Inc.
  *
@@ -432,7 +489,7 @@ module.exports = function() {
   return ReactPropTypes;
 };
 
-},{"./lib/ReactPropTypesSecret":7}],5:[function(require,module,exports){
+},{"./lib/ReactPropTypesSecret":8}],6:[function(require,module,exports){
 (function (process){
 /**
  * Copyright (c) 2013-present, Facebook, Inc.
@@ -991,7 +1048,7 @@ module.exports = function(isValidElement, throwOnDirectAccess) {
 };
 
 }).call(this,require('_process'))
-},{"./checkPropTypes":3,"./lib/ReactPropTypesSecret":7,"_process":2,"object-assign":1}],6:[function(require,module,exports){
+},{"./checkPropTypes":4,"./lib/ReactPropTypesSecret":8,"_process":3,"object-assign":2}],7:[function(require,module,exports){
 (function (process){
 /**
  * Copyright (c) 2013-present, Facebook, Inc.
@@ -1023,7 +1080,7 @@ if (process.env.NODE_ENV !== 'production') {
 }
 
 }).call(this,require('_process'))
-},{"./factoryWithThrowingShims":4,"./factoryWithTypeCheckers":5,"_process":2}],7:[function(require,module,exports){
+},{"./factoryWithThrowingShims":5,"./factoryWithTypeCheckers":6,"_process":3}],8:[function(require,module,exports){
 /**
  * Copyright (c) 2013-present, Facebook, Inc.
  *
@@ -1037,7 +1094,7 @@ var ReactPropTypesSecret = 'SECRET_DO_NOT_PASS_THIS_OR_YOU_WILL_BE_FIRED';
 
 module.exports = ReactPropTypesSecret;
 
-},{}],8:[function(require,module,exports){
+},{}],9:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1056,6 +1113,14 @@ var _propTypes = require('prop-types');
 
 var _propTypes2 = _interopRequireDefault(_propTypes);
 
+var _fastIsnumeric = require('fast-isnumeric');
+
+var _fastIsnumeric2 = _interopRequireDefault(_fastIsnumeric);
+
+var _objectAssign = require('object-assign');
+
+var _objectAssign2 = _interopRequireDefault(_objectAssign);
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -1067,7 +1132,7 @@ function _inherits(subClass, superClass) { if (typeof superClass !== "function" 
 // The naming convention is:
 //   - events are attached as `'plotly_' + eventName.toLowerCase()`
 //   - react props are `'on' + eventName`
-var eventNames = ['AfterExport', 'AfterPlot', 'Animated', 'AnimatingFrame', 'AnimationInterrupted', 'AutoSize', 'BeforeExport', 'ButtonClicked', 'Click', 'ClickAnnotation', 'Deselect', 'DoubleClick', 'Framework', 'Hover', 'LegendClick', 'LegendDoubleClick', 'Relayout', 'Restyle', 'Redraw', 'Selected', 'Selecting', 'SliderChange', 'SliderEnd', 'SliderStart', 'Transitioning', 'TransitionInterrupted', 'Unhover'];
+var eventNames = ['AfterExport', 'AfterPlot', 'Animated', 'AnimatingFrame', 'AnimationInterrupted', 'AutoSize', 'BeforeExport', 'ButtonClicked', 'Click', 'ClickAnnotation', 'Deselect', 'DoubleClick', 'Framework', 'Hover', 'Relayout', 'Restyle', 'Redraw', 'Selected', 'Selecting', 'SliderChange', 'SliderEnd', 'SliderStart', 'Transitioning', 'TransitionInterrupted', 'Unhover'];
 
 var updateEvents = ['plotly_restyle', 'plotly_redraw', 'plotly_relayout', 'plotly_doubleclick', 'plotly_animated'];
 
@@ -1076,6 +1141,8 @@ var updateEvents = ['plotly_restyle', 'plotly_redraw', 'plotly_relayout', 'plotl
 var isBrowser = typeof window !== 'undefined';
 
 function plotComponentFactory(Plotly) {
+  var hasReactAPIMethod = !!Plotly.react;
+
   var PlotlyComponent = function (_Component) {
     _inherits(PlotlyComponent, _Component);
 
@@ -1085,6 +1152,7 @@ function plotComponentFactory(Plotly) {
       var _this = _possibleConstructorReturn(this, (PlotlyComponent.__proto__ || Object.getPrototypeOf(PlotlyComponent)).call(this, props));
 
       _this.p = Promise.resolve();
+      _this.fitHandler = null;
       _this.resizeHandler = null;
       _this.handlers = {};
 
@@ -1093,29 +1161,34 @@ function plotComponentFactory(Plotly) {
       _this.attachUpdateEvents = _this.attachUpdateEvents.bind(_this);
       _this.getRef = _this.getRef.bind(_this);
       _this.handleUpdate = _this.handleUpdate.bind(_this);
-      _this.figureCallback = _this.figureCallback.bind(_this);
       return _this;
     }
 
     _createClass(PlotlyComponent, [{
+      key: 'shouldComponentUpdate',
+      value: function shouldComponentUpdate(nextProps) {
+        return nextProps.revision === void 0 || nextProps.revision !== this.props.revision;
+      }
+    }, {
       key: 'componentDidMount',
       value: function componentDidMount() {
         var _this2 = this;
 
+        if (!isBrowser) return;
         this.p = this.p.then(function () {
           return Plotly.newPlot(_this2.el, {
             data: _this2.props.data,
-            layout: _this2.props.layout,
+            layout: _this2.resizedLayoutIfFit(_this2.props.layout),
             config: _this2.props.config,
             frames: _this2.props.frames
           });
         }).then(function () {
-          return _this2.syncWindowResize(null, true);
+          return _this2.syncWindowResize(null, false);
         }).then(this.syncEventHandlers).then(this.attachUpdateEvents).then(function () {
-          return _this2.figureCallback(_this2.props.onInitialized);
-        }).catch(function (err) {
-          console.error('Error while plotting:', err);
-          return _this2.props.onError && _this2.props.onError(err);
+          return _this2.props.onInitialized && _this2.props.onInitialized(_this2.el);
+        }).catch(function (e) {
+          console.error('Error while plotting:', e);
+          return _this2.props.onError && _this2.props.onError();
         });
       }
     }, {
@@ -1123,24 +1196,20 @@ function plotComponentFactory(Plotly) {
       value: function componentWillUpdate(nextProps) {
         var _this3 = this;
 
-        if (nextProps.revision !== void 0 && nextProps.revision === this.props.revision) {
-          // if revision is set and unchanged, do nothing
-          return;
-        }
-
-        var numPrevFrames = this.props.frames && this.props.frames.length ? this.props.frames.length : 0;
-        var numNextFrames = nextProps.frames && nextProps.frames.length ? nextProps.frames.length : 0;
-        if (nextProps.layout === this.props.layout && nextProps.data === this.props.data && nextProps.config === this.props.config && numNextFrames === numPrevFrames) {
-          // prevent infinite loops when component is re-rendered after onUpdate
-          // frames *always* changes identity so fall back to check length only :(
-          return;
-        }
-
+        if (!isBrowser) return;
         this.p = this.p.then(function () {
-          if (Plotly.react) {
+          if (hasReactAPIMethod) {
             return Plotly.react(_this3.el, {
               data: nextProps.data,
-              layout: nextProps.layout,
+              layout: _this3.resizedLayoutIfFit(nextProps.layout),
+              config: nextProps.config,
+              frames: nextProps.frames
+            });
+          } else {
+            _this3.handlers = {};
+            return Plotly.newPlot(_this3.el, {
+              data: nextProps.data,
+              layout: _this3.resizedLayoutIfFit(nextProps.layout),
               config: nextProps.config,
               frames: nextProps.frames
             });
@@ -1150,7 +1219,9 @@ function plotComponentFactory(Plotly) {
         }).then(function () {
           return _this3.syncWindowResize(nextProps);
         }).then(function () {
-          return _this3.figureCallback(nextProps.onUpdate);
+          if (!hasReactAPIMethod) _this3.attachUpdateEvents();
+        }).then(function () {
+          return _this3.handleUpdate(nextProps);
         }).catch(function (err) {
           console.error('Error while plotting:', err);
           _this3.props.onError && _this3.props.onError(err);
@@ -1159,8 +1230,13 @@ function plotComponentFactory(Plotly) {
     }, {
       key: 'componentWillUnmount',
       value: function componentWillUnmount() {
-        this.figureCallback(this.props.onPurge);
-
+        if (this.props.onPurge) {
+          this.props.onPurge(this.el);
+        }
+        if (this.fitHandler && isBrowser) {
+          window.removeEventListener('resize', this.fitHandler);
+          this.fitHandler = null;
+        }
         if (this.resizeHandler && isBrowser) {
           window.removeEventListener('resize', this.resizeHandler);
           this.resizeHandler = null;
@@ -1190,38 +1266,37 @@ function plotComponentFactory(Plotly) {
       }
     }, {
       key: 'handleUpdate',
-      value: function handleUpdate() {
-        this.figureCallback(this.props.onUpdate);
-      }
-    }, {
-      key: 'figureCallback',
-      value: function figureCallback(callback) {
-        if (typeof callback === 'function') {
-          var _el = this.el,
-              data = _el.data,
-              layout = _el.layout;
-
-          var frames = this.el._transitionData ? this.el._transitionData._frames : null;
-          var figure = { data: data, layout: layout, frames: frames }; // for extra clarity!
-          callback(figure, this.el);
+      value: function handleUpdate(props) {
+        props = props || this.props;
+        if (props.onUpdate && typeof props.onUpdate === 'function') {
+          props.onUpdate(this.el);
         }
       }
     }, {
       key: 'syncWindowResize',
-      value: function syncWindowResize(propsIn, invoke) {
+      value: function syncWindowResize(props, invoke) {
         var _this4 = this;
 
-        var props = propsIn || this.props;
+        props = props || this.props;
         if (!isBrowser) return;
+
+        if (props.fit && !this.fitHandler) {
+          this.fitHandler = function () {
+            return Plotly.relayout(_this4.el, _this4.getSize());
+          };
+          window.addEventListener('resize', this.fitHandler);
+
+          if (invoke) return this.fitHandler();
+        } else if (!props.fit && this.fitHandler) {
+          window.removeEventListener('resize', this.fitHandler);
+          this.fitHandler = null;
+        }
 
         if (props.useResizeHandler && !this.resizeHandler) {
           this.resizeHandler = function () {
             return Plotly.Plots.resize(_this4.el);
           };
           window.addEventListener('resize', this.resizeHandler);
-          if (invoke) {
-            this.resizeHandler();
-          }
         } else if (!props.useResizeHandler && this.resizeHandler) {
           window.removeEventListener('resize', this.resizeHandler);
           this.resizeHandler = null;
@@ -1241,9 +1316,9 @@ function plotComponentFactory(Plotly) {
 
     }, {
       key: 'syncEventHandlers',
-      value: function syncEventHandlers(propsIn) {
+      value: function syncEventHandlers(props) {
         // Allow use of nextProps if passed explicitly:
-        var props = propsIn || this.props;
+        props = props || this.props;
 
         for (var i = 0; i < eventNames.length; i++) {
           var eventName = eventNames[i];
@@ -1261,10 +1336,36 @@ function plotComponentFactory(Plotly) {
         }
       }
     }, {
+      key: 'resizedLayoutIfFit',
+      value: function resizedLayoutIfFit(layout) {
+        if (!this.props.fit) {
+          return layout;
+        }
+        return (0, _objectAssign2.default)({}, layout, this.getSize(layout));
+      }
+    }, {
+      key: 'getSize',
+      value: function getSize(layout) {
+        var rect = void 0;
+        layout = layout || this.props.layout;
+        var layoutWidth = layout ? layout.width : null;
+        var layoutHeight = layout ? layout.height : null;
+        var hasWidth = (0, _fastIsnumeric2.default)(layoutWidth);
+        var hasHeight = (0, _fastIsnumeric2.default)(layoutHeight);
+
+        if (!hasWidth || !hasHeight) {
+          rect = this.el.parentElement.getBoundingClientRect();
+        }
+
+        return {
+          width: hasWidth ? parseInt(layoutWidth) : rect.width,
+          height: hasHeight ? parseInt(layoutHeight) : rect.height
+        };
+      }
+    }, {
       key: 'render',
       value: function render() {
         return _react2.default.createElement('div', {
-          id: this.props.divId,
           style: this.props.style,
           ref: this.getRef,
           className: this.props.className
@@ -1276,6 +1377,7 @@ function plotComponentFactory(Plotly) {
   }(_react.Component);
 
   PlotlyComponent.propTypes = {
+    fit: _propTypes2.default.bool,
     data: _propTypes2.default.arrayOf(_propTypes2.default.object),
     config: _propTypes2.default.object,
     layout: _propTypes2.default.object,
@@ -1288,8 +1390,7 @@ function plotComponentFactory(Plotly) {
     debug: _propTypes2.default.bool,
     style: _propTypes2.default.object,
     className: _propTypes2.default.string,
-    useResizeHandler: _propTypes2.default.bool,
-    divId: _propTypes2.default.string
+    useResizeHandler: _propTypes2.default.bool
   };
 
   for (var i = 0; i < eventNames.length; i++) {
@@ -1298,6 +1399,7 @@ function plotComponentFactory(Plotly) {
 
   PlotlyComponent.defaultProps = {
     debug: false,
+    fit: false,
     useResizeHandler: false,
     data: [],
     style: { position: 'relative', display: 'inline-block' }
@@ -1307,5 +1409,5 @@ function plotComponentFactory(Plotly) {
 }
 module.exports = exports['default'];
 
-},{"prop-types":6}]},{},[8])(8)
+},{"fast-isnumeric":1,"object-assign":2,"prop-types":7}]},{},[9])(9)
 });

@@ -84,14 +84,29 @@ describe('<Plotly/>', () => {
           .catch(err => done.fail(err))
           .then(done);
       });
+
+      test('overrides the height when fit: true', done => {
+        createPlot({
+          layout: {width: 320, height: 240},
+          fit: true,
+        })
+          .then(() => {
+            expectPlotlyAPICall(Plotly.newPlot, {
+              layout: {width: 320, height: 240},
+            });
+          })
+          .catch(err => done.fail(err))
+          .then(done);
+      });
     });
 
     describe('plot updates', () => {
       test('updates data', done => {
         createPlot({
+          fit: true,
           layout: {width: 123, height: 456},
           onUpdate: once(() => {
-            expectPlotlyAPICall(Plotly.react, {
+            expectPlotlyAPICall(Plotly.newPlot, {
               data: [{x: [1, 2, 3]}],
               layout: {width: 123, height: 456},
             });
@@ -106,8 +121,9 @@ describe('<Plotly/>', () => {
 
       test('sets the title', done => {
         createPlot({
+          fit: false,
           onUpdate: once(() => {
-            expectPlotlyAPICall(Plotly.react, {
+            expectPlotlyAPICall(Plotly.newPlot, {
               layout: {title: 'test test'},
             });
             done();
@@ -122,6 +138,7 @@ describe('<Plotly/>', () => {
       test('revision counter', done => {
         var callCnt = 0;
         createPlot({
+          fit: false,
           revision: 0,
           onUpdate: () => {
             callCnt++;
@@ -154,6 +171,63 @@ describe('<Plotly/>', () => {
             );
           })
           .catch(err => done.fail(err));
+      });
+    });
+
+    describe('responding to window events', () => {
+      describe('with fit: true', () => {
+        test('does not call relayout on initialization', done => {
+          createPlot({
+            fit: true,
+            onRelayout: () => done.fail('Unexpected relayout event'),
+          })
+            .then(() => {
+              setTimeout(done, 20);
+            })
+            .catch(err => done.fail(err));
+        });
+
+        test('calls relayout on window resize when fit: true', done => {
+          let relayoutCnt = 0;
+          createPlot({
+            fit: true,
+            onRelayout: () => {
+              relayoutCnt++;
+              if (relayoutCnt === 1) {
+                setTimeout(done, 20);
+              }
+            },
+          })
+            .then(() => {
+              window.dispatchEvent(new Event('resize'));
+            })
+            .catch(err => done.fail(err));
+        });
+      });
+
+      describe('with fit: false', () => {
+        test('does not call relayout on init', done => {
+          createPlot({
+            fit: false,
+            onRelayout: () => done.fail('Unexpected relayout event'),
+          })
+            .then(() => {
+              setTimeout(done, 20);
+            })
+            .catch(err => done.fail(err));
+        });
+
+        test('does not call relayout on window resize', done => {
+          createPlot({
+            fit: false,
+            onRelayout: () => done.fail('Unexpected relayout event'),
+          })
+            .then(() => {
+              window.dispatchEvent(new Event('resize'));
+              setTimeout(done, 20);
+            })
+            .catch(err => done.fail(err));
+        });
       });
     });
   });
