@@ -8,7 +8,7 @@ var _factory = require('./factory');
 
 var _factory2 = _interopRequireDefault(_factory);
 
-var _plotly = require('plotly.js-dist');
+var _plotly = require('plotly.js-basic-dist');
 
 var _plotly2 = _interopRequireDefault(_plotly);
 
